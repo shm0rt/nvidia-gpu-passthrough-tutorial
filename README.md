@@ -9,13 +9,34 @@ Before anything, enable IOMMU (Intel VT-d or AMD-Vi) in your BIOS. This setting 
 
 For Intel CPUs, make sure VT-d is enabled.
 
-## 2. Install the Required Packages
+## 2. Enable IOMMU on GRUB
+
+Modify GRUB to enable IOMMU and bind the **GTX 1080 Ti** at boot
+
+1. Modify your **Grub configuration:**
+`sudo nano /etc/default/grub`
+2. Find the line:
+`GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"`
+and modify it to:
+`GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=on kvm.ignore_msrs=1 vfio-pci.ids=10de:1b06,10de:10ef`
+
+- Replace `intel_iommu=on` with `amd_iommu=on` if you have an AMD CPU.
+- Replace `10de:1b06,10de:10ef` with your GPU and audio device PCI IDs (explained in step 4).
+
+3. Update Grub:
+`sudo update-grub`
+4. Reboot:
+`sudo reboot`
+
+## 3. Install the Required Packages
 
 `sudo apt install libvirt-daemon-system libvirt-clients qemu-kvm qemu-utils virt-manager ovmf`
 
-## 3. Get the PCI IDs of the 1080 Ti
+## 4. Get the PCI IDs of the 1080 Ti
 
-Run: `lspci -nn | grep -i nvidia`
+Run:
+
+`lspci -nn | grep -i nvidia`
 
 You should see output like this:
 
@@ -26,33 +47,6 @@ You should see output like this:
 
 - 10de:1b06 → GPU ID
 - 10de:10ef → HDMI Audio ID
-
-## 4. Enable IOMMU on the Kernel
-
-Modify your **Grub configuration:**
-
-1. Open the **Grub** config
-
-`sudo nano /etc/default/grub`
-
-2. Find the line:
-
-`GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"`
-
-and modify it to:
-
-`GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=on kvm.ignore_msrs=1 vfio-pci.ids=10de:1b06,10de:10ef`
-
-- Replace intel_iommu=on with amd_iommu=on if you have an AMD CPU.
-- Replace 10de:1b06,10de:10ef with your GPU and audio device PCI IDs (explained in step 3).
-
-3. Update Grub:
-
-`sudo update-grub`
-
-4. Reboot:
-
-`sudo reboot`
 
 ## 5. Bind the 1080 Ti to VFIO
 
@@ -88,10 +82,40 @@ blacklist nvidia-uvm
 
 Save and exit.
 
-## 6. Pass Through the 1080 Ti in Virt-Manager
+## 6. Load vfio-pci Before NVIDIA Drivers
 
-## 7. Reboot and Verify
+To ensure the GTX 1080 Ti is bound to vfio-pci before Linux loads NVIDIA drivers, add this line:
+
+1. Open:
+`sudo nano /etc/modprobe.d/vfio.conf`
+2. Add:
+`softdep nvidia pre: vfio-pci`
+
+## 7. Update Initramfs
+
+```bash
+sudo update-initramfs -u
+sudo reboot
+```
+
+After reboot, check:
 
 `lspci -nnk | grep -A3 -i nvidia`
 
 Your GTX 970 should be used normally, and GTX 1080 Ti should be bound to vfio-pci.
+
+## 8. Add GPU Passthrough in Virt-Manager
+Open Virt-Manager:
+`virt-manager`
+
+- Select your VM → Click Shut Down if it's running.
+- Click Open → Go to "Add Hardware".
+- Select "PCI Host Device" → Choose the GTX 1080 Ti (10de:1b06).
+- Click "Finish".
+
+*(Optional)* Pass through HDMI Audio
+
+- Click "Add Hardware" → PCI Host Device.
+- Choose HDMI Audio (10de:10ef).
+
+Click "Finish".
