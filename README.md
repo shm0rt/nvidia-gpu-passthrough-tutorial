@@ -18,7 +18,7 @@ Modify GRUB to enable IOMMU and bind the **GTX 1080 Ti** at boot
 2. Find the line:
 `GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"`
 and modify it to:
-`GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=on kvm.ignore_msrs=1 vfio-pci.ids=10de:1b06,10de:10ef`
+`GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=on kvm.ignore_msrs=1 vfio-pci.ids=10de:1b06,10de:10ef"`
 
 - Replace `intel_iommu=on` with `amd_iommu=on` if you have an AMD CPU.
 - Replace `10de:1b06,10de:10ef` with your GPU and audio device PCI IDs (explained in step 4).
